@@ -1,10 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  3 14:10:07 2019
-
-@author: ncelik34
-"""
-
+"""Train a CNN to idealize single channel data"""
 
 # Importing the libraries
 import os
@@ -107,69 +101,61 @@ def step_decay(epoch):
     return lrate
 
 
-'''
-############# SET UP RUN HERE ####################
-'''
-
-batch_size = 256
-
-
-
-df = pd.read_csv('outfinaltest161.csv', header=None)
-dataset = df.values.astype('float64')
-timep = dataset[:, 0]
-maxer = np.amax(dataset[:, 2])
-maxeri = maxer.astype('int')
-maxchannels = maxeri
-idataset = dataset[:, 2].astype(int)
-scaler = MinMaxScaler(feature_range=(0, 1))
-dataset = scaler.fit_transform(dataset)
-
-# train and test set split and reshape:
-train_size = int(len(dataset) * 0.80)
-modder = math.floor(train_size/batch_size)
-train_size = int(modder*batch_size)
-test_size = int(len(dataset) - train_size)
-modder = math.floor(test_size/batch_size)
-test_size = int(modder*batch_size)
-
-print(f'training set = {train_size}')
-print(f'test set = {test_size}')
-print(f'total length = {test_size + train_size}')
+def _load_training_data(base_dir):
+    data_path = os.path.join(base_dir, "train_data.csv")
+    df = pd.read_csv(
+        data_path,
+        header=None,
+        names=["time", "signal", "idealized"],
+        dtype={"time": np.float64, "signal": np.float64, "idealized": np.int64},
+    )
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    signal = scaler.fit_transform(df.signal)
+    return signal, df.idealized
 
 
-x_train = dataset[:, 1]
-y_train = idataset[:]
-x_train = x_train.reshape((len(x_train), 1))
-y_train = y_train.reshape((len(y_train), 1))
+def _resample_data(X, y):
+    sm = SMOTE(sampling_strategy='auto', random_state=42)
+    X_res, Y_res = sm.fit_sample(X, y)
+    return X_res, Y_res
 
 
-sm = SMOTE(sampling_strategy='auto', random_state=42)
-X_res, Y_res = sm.fit_sample(x_train, y_train)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    
+    # Hyperparameters
+    parser.add_argument("--batch-size", type=int, default=25)
+    
+    # Input data and model directories
+    parser.add_argument("--model_dir", type=str)
+    parser.add_argument("--sm-model-dir", type=str, default=os.environ.get("SM_MODEL_DIR"))
+    parser.add_argument("--train", type=str, default=os.environ.get("SM_CHANNEL_TRAIN"))
+    parser.add_argument("--test", type=str, default=os.envrion.get("SM_CHANNEL_TEST"))
+    parser.add_argument("--eval", type=str, default=os.environ.get("SM_CHANNEL_EVAL"))
+    
+    args, unknown_args = parser.parse_known_args()
 
-yy_res = Y_res.reshape((len(Y_res), 1))
-yy_res = to_categorical(yy_res, num_classes=maxchannels+1)
-xx_res, yy_res = shuffle(X_res, yy_res)
+    X_train, y_train = _load_training_data(args.train)
+    max_channels = y_train.max() + 1
+    X_train, y_train = _resample_data(X_train, y_train)
+    
+    yy_res = y_train.reshape(-1, 1)
+    yy_res = to_categorical(yy_res, num_classes=max_channels)
+    xx_res, yy_res = shuffle(X_res, yy_res)
 
+    trainy_size = int(len(xx_res) * 0.80)
+    modder = math.floor(trainy_size/batch_size)
+    trainy_size = int(modder*batch_size)
+    testy_size = int(len(xx_res) - trainy_size)
+    modder = math.floor(testy_size/batch_size)
+    testy_size = int(modder*batch_size)
 
-trainy_size = int(len(xx_res) * 0.80)
-modder = math.floor(trainy_size/batch_size)
-trainy_size = int(modder*batch_size)
-testy_size = int(len(xx_res) - trainy_size)
-modder = math.floor(testy_size/batch_size)
-testy_size = int(modder*batch_size)
-
-print('training set= ', trainy_size)
-print('test set =', testy_size)
-print('total length', testy_size+trainy_size)
-
-
-in_train, in_test = xx_res[0:trainy_size,
-                           0], xx_res[trainy_size:trainy_size+testy_size, 0]
-target_train, target_test = yy_res[0:trainy_size,
-                                   :], yy_res[trainy_size:trainy_size+testy_size, :]
-in_train = in_train.reshape(len(in_train), 1, 1, 1)
-in_test = in_test.reshape(len(in_test), 1, 1, 1)
+    in_train = xx_res[0:trainy_size, 0]
+    in_test = xx_res[trainy_size:trainy_size+testy_size, 0]
+    target_train = yy_res[0:trainy_size, :]
+    target_test = yy_res[trainy_size:trainy_size+testy_size, :]
+    in_train = in_train.reshape(len(in_train), 1, 1, 1)
+    in_test = in_test.reshape(len(in_test), 1, 1, 1)
 
 
 # validation set!!
