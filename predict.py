@@ -4,10 +4,36 @@
 import argparse
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("model", metavar="MODEL", help="Path to a trained DeepLearning model")
-parser.add_argument("predict", metavar="PREDICT", nargs="+", help="Path(s) to the single molecule data for inferences. The file(s) must be in CSV format with three columns.")
-parser.add_argument("--out", "-o", metavar="OUT", help="Path to save the predictions. By default the predictions will be written to standard output.")
-parser.add_argument("--scaler", "-s", metavar="SCALER", help="Path to the saved MinMaxScaler to use to transform data before predictions. Bf default a new scaler is trained on the prediction data")
+parser.add_argument(
+    "model",
+    metavar="MODEL",
+    help="Path to a trained DeepLearning model"
+)
+parser.add_argument(
+    "predict",
+    metavar="PREDICT",
+    nargs="+",
+    help=("Path(s) to the single molecule data for inferences. "
+          "The file(s) must be in CSV format with three columns.")
+)
+parser.add_argument(
+    "--out",
+    "-o",
+    metavar="OUT",
+    help="Path to save the predictions. By default the predictions will be written to standard output."
+)
+parser.add_argument(
+    "--scaler",
+    "-s",
+    metavar="SCALER",
+    help=("Path to the saved MinMaxScaler to use to transform data before predictions. "
+          "By default a new scaler is trained on the prediction data")
+)
+parser.add_argument(
+    "--invert",
+    action="store_true",
+    help=("Invert the single channel signal (current). Openings should be upwards")
+)
 args = parser.parse_args()
 
 
@@ -15,7 +41,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
 
 import tensorflow as tf
 from tensorflow.keras.models import load_model
@@ -50,6 +76,10 @@ else:
     scaler.fit(val_data[["current"]])
 
 current_val = scaler.transform(val_data[["current"]])
+
+if args.invert:
+    current_val = -current_val
+
 x_val = current_val.reshape(-1, 1, 1, 1)
 
 # Load the model
