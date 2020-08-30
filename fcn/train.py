@@ -188,6 +188,11 @@ if __name__ == "__main__":
 
     args, _ = parser.parse_known_args()
 
+    # Log GPU info
+    gpu_devs = tf.config.experimental.list_physical_devices('GPU')
+    print("Num GPUs Available:", len(gpu_devs))
+    print("GPU Devices:", gpu_devs)
+    
     # Training data
     training_paths = sorted(args.train.glob("*.csv"))
     print("Training files:", *[str(p) for p in training_paths], sep="\n")
