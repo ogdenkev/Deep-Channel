@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr  3 14:10:07 2019
-
-@author: ncelik34
+Train a deep learning network to detect events in single molecule data
 """
 
 import argparse
 
-parser = argparse.ArgumentParser(description="Train a deep learning network to detect events in single molecule data")
+parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("train", metavar="TRAIN", nargs="+", help="Path(s) to the single molecule data for training. The file(s) must be in CSV format with three columns.")
 parser.add_argument("--levels", default="0,-5.4", help="A comma-separated list giving the amplitude level for each state [default: %(default)s]")
 parser.add_argument("--out", "-o", metavar="OUT", help="Path to save the trained model. By default the model will be saved to deepchannel-model-<TIMESTAMP>.h5")
@@ -39,10 +37,7 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.metrics import Precision, Recall
 from tensorflow.keras.callbacks import LearningRateScheduler
 from tensorflow.keras import optimizers
-from tensorflow.keras import backend as K
 from tensorflow.keras.utils import to_categorical
-
-# from tensorflow_addons.metrics import F1Score
 
 
 def step_decay(epoch):
