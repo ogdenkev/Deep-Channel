@@ -186,7 +186,7 @@ else:
     HISTORY_PATH = TIMESTAMP.strftime("deepchannel-training-history-%Y%m%dT%H%M%SZ.pkl")
 
 print(f"Saving training history to {HISTORY_PATH}")
-with open(args.history, "wb") as fd:
+with open(HISTORY_PATH, "wb") as fd:
     pickle.dump(history.history, fd)
 
 if args.scaler:
